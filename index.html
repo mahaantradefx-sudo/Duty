@@ -51,7 +51,8 @@ img{width:100%;border:1px solid var(--bd);border-radius:8px;margin-top:10px;back
 <div class="bar"><input id="q" type="search" placeholder="Name / number search" oninput="filt()"></div>
 <div class="vw"><span>Col</span><button class="g2" onclick="sz('cw',-10)">-</button><button class="g2" onclick="sz('cw',10)">+</button>
 <span>Name</span><button class="g2" onclick="sz('nw',-15)">-</button><button class="g2" onclick="sz('nw',15)">+</button>
-<span>Row</span><button class="g2" onclick="sz('rh0',-4)">-</button><button class="g2" onclick="sz('rh0',4)">+</button></div>
+<span>Row</span><button class="g2" onclick="sz('rh0',-4)">-</button><button class="g2" onclick="sz('rh0',4)">+</button>
+<button class="g2" onclick="loadNom()" style="margin-left:auto">Nominal roll load</button></div>
 <div class="sheet"><div id="tbl"></div></div>
 <p class="hint">Ippo irukkura month-oda ella dates-um right side-la varum. Mela arrow-la month maathalam. Excel maathiri cell-la type pannunga. Enter = keezha, Tab = adutha cell. Row number-a thattina andha row height maarum. Format: 09:00-11:00 3rd sentry</p>
 
@@ -59,6 +60,7 @@ img{width:100%;border:1px solid var(--bd);border-radius:8px;margin-top:10px;back
   <b>Nominal roll</b>
   <div id="rep"></div>
 </div>
+<div class="card" id="dayCard"><b id="dayT">Daily abstract</b><div style="overflow-x:auto;margin-top:6px"><div id="day"></div></div></div>
 <div class="card" id="absCard"><b id="absT">Monthly abstract</b><div style="overflow-x:auto;margin-top:6px"><div id="abs"></div></div></div>
 <div class="card" id="lowCard"><b id="lowT">Kammi duty</b><div style="overflow-x:auto;margin-top:6px"><div id="low"></div></div></div>
 <div id="out"></div>
@@ -73,6 +75,8 @@ S.names=S.names||[];S.dates=S.dates||[];S.cells=S.cells||{};S.cols=S.cols||{};
 S.rh=S.rh||{};
 function nid(){return 'p'+Date.now().toString(36)+(uid++)}
 while(S.names.length<45)S.names.push({id:nid(),n:''});
+var NOM=["HAV-6279 Mathiyalagan", "HAV-837 Murugan", "HAV-2780 Senthil Kumar", "HAV-2827 Mahalingam", "HAV-3136 Ganapathy", "HAV-4479 Jegadeeswaran", "HAV-3820 Palani Muthu", "HAV-2298 Prakash Kumar", "HAV-4026 Satheesh", "HAV-3918 Anand", "HAV-3712 Suresh Kumar", "PC-3931 Sekar", "PC-4398 Ajith Kumar", "PC-4389 Loganathan", "PC-4303 Karthick Raja", "PC-4420 Raj Kumar", "PC-4155 Santhana Prabhu", "PC-4855 Karthick Raja", "PC-4923 Deivam", "PC-4301 Santhosh Kumar", "PC-4152 Rajadurai", "PC-4160 Vignesh", "PC-4329 Ramesh", "PC-4330 Sundara Manikandan", "PC-4181 Balamurugan", "PC-4186 Karthick", "PC-4213 Bharath", "PC-4824 Senthil Kumar", "PC-4678 Aravinth Kumar", "PC-4768 Muthuchamy", "PC-4532 Arun Kumar", "PC-4681 Shahul Hameed", "PC-4983 Manikandan", "PC-5042 Raj Kumar", "PC-4684 Jegadheesan", "PC-5097 Balamurugan", "PC-4553 Alex Pandi", "PC-4636 Rathna Giri", "PC-5103 Karthick", "PC-4536 Karan", "PC-4857 Seenivasan", "PC-4522 Vignesh Pandiyan", "PC-4227 Pradeep", "PC-4694 Abinesh", "PC-4575 Rajendra Prasad"];
+if(!S.names.some(function(x){return x.n.trim()}))NOM.forEach(function(n,i){S.names[i].n=n});
 var now=new Date(),P2=function(n){return String(n).padStart(2,'0')};
 var TD=now.getFullYear()+'-'+P2(now.getMonth()+1)+'-'+P2(now.getDate());
 S.month=TD.slice(0,7);
@@ -93,7 +97,7 @@ function findDups(){var out=[];S.names.forEach(function(p,i){var g={};S.dates.fo
 function dupSet(dl){var D={};dl.forEach(function(e){e.ds.forEach(function(d){D[e.p.id+'|'+d]=1})});return D}
 function groups(dl){dl.sort(function(a,b){return b.n-a.n});var by={},ord=[];dl.forEach(function(e){var k=e.p.id;if(!by[k]){by[k]={nm:e.nm,items:[]};ord.push(by[k])}by[k].items.push(e)});return ord}
 function mark(){
-  absRender();lowRender();
+  absRender();lowRender();dayRender();
   var dl=findDups(),D=dupSet(dl);
   document.querySelectorAll('td[data-k]').forEach(function(td){td.classList.toggle('dup',!!D[td.getAttribute('data-k')])});
   document.getElementById('repCard').style.display=dl.length?'block':'none';
@@ -114,18 +118,24 @@ function draw(){
   var th=document.getElementById('today');if(th)document.querySelector('.sheet').scrollLeft=Math.max(0,th.offsetLeft-200);
 }
 function buildDl(){document.getElementById('dl').innerHTML=['1st sentry','2nd sentry','3rd sentry','4th sentry','Waiting','Roll call'].map(function(z){return '<option value="'+z+'">'}).join('')}
-function applyVars(){var r=document.documentElement.style;r.setProperty('--cw',(S.cw||84)+'px');r.setProperty('--nw',(S.nw||150)+'px')}
-var DEFS={cw:84,nw:150,rh0:22},LIM={cw:[60,200],nw:[90,260],rh0:[18,60]};
+function loadNom(){if(!confirm('45 names replace aagum (row order-padi). Duty data maaraadhu. Continue?'))return;NOM.forEach(function(n,i){S.names[i].n=n});save();draw()}
+function applyVars(){var r=document.documentElement.style;r.setProperty('--cw',(S.cw||84)+'px');r.setProperty('--nw',(S.nw||190)+'px')}
+var DEFS={cw:84,nw:190,rh0:22},LIM={cw:[60,200],nw:[90,260],rh0:[18,60]};
 function sz(k,d){S[k]=Math.min(LIM[k][1],Math.max(LIM[k][0],(S[k]||DEFS[k])+d));save();applyVars();if(k==='rh0')draw()}
 function filt(){var q=document.getElementById('q').value.toLowerCase().trim();document.querySelectorAll('tr[data-i]').forEach(function(tr){var n=(S.names[+tr.dataset.i].n||'').toLowerCase();tr.style.display=(!q||n.indexOf(q)>-1)?'':'none'})}
 var MNS=['January','February','March','April','May','June','July','August','September','October','November','December'],L=['','1st','2nd','3rd','4th'];
-function absData(){var rows=[],t={c:0,w:0,r:0};S.names.forEach(function(p,i){var n={1:0,2:0,3:0,4:0,w:0,r:0};S.dates.forEach(function(d){var v=norm(S.cells[p.id+'|'+d]||'');if(!v)return;if(v.indexOf('roll')>-1)n.r++;else if(v.indexOf('wait')>-1)n.w++;else if(v.indexOf('1st')>-1)n[1]++;else if(v.indexOf('2nd')>-1)n[2]++;else if(v.indexOf('3rd')>-1)n[3]++;else if(v.indexOf('4th')>-1)n[4]++});var c=n[1]+n[2]+n[3]+n[4];if(!c&&!n.w&&!n.r)return;var br=[1,2,3,4].filter(function(k){return n[k]}).map(function(k){return L[k]+' x'+n[k]}).join(', ');t.c+=c;t.w+=n.w;t.r+=n.r;rows.push([p.n.trim()||('Row '+(i+1)),br,c,n.w,n.r])});return{rows:rows,t:t}}
+function absData(){var rows=[],t={c:0,w:0,r:0};S.names.forEach(function(p,i){var n={1:0,2:0,3:0,4:0,w:0,r:0};S.dates.forEach(function(d){var v=norm(S.cells[p.id+'|'+d]||'');if(!v)return;if(v.indexOf('roll')>-1)n.r++;else if(v.indexOf('wait')>-1)n.w++;else if(v.indexOf('1st')>-1)n[1]++;else if(v.indexOf('2nd')>-1)n[2]++;else if(v.indexOf('3rd')>-1)n[3]++;else if(v.indexOf('4th')>-1)n[4]++});var c=n[1]+n[2]+n[3]+n[4];if(!c&&!n.w&&!n.r&&!p.n.trim())return;var br=[1,2,3,4].filter(function(k){return n[k]}).map(function(k){return L[k]+' x'+n[k]}).join(', ');t.c+=c;t.w+=n.w;t.r+=n.r;rows.push([p.n.trim()||('Row '+(i+1)),br,c,n.w,n.r])});rows.sort(function(a,b){return b[2]-a[2]||(b[3]+b[4])-(a[3]+a[4])});return{rows:rows,t:t}}
 function absRender(){var a=absData(),ym=S.month.split('-');
   document.getElementById('absT').textContent='Monthly abstract - '+MNS[+ym[1]-1]+' '+ym[0];
   var h='<table class="rt"><tr><th>Name</th><th>Sentry</th><th>Count</th><th>Waiting</th><th>Roll call</th></tr>';
   a.rows.forEach(function(r){h+='<tr><td><b>'+esc(r[0])+'</b></td><td>'+esc(r[1]||'-')+'</td><td>'+P2(r[2])+'</td><td>'+P2(r[3])+'</td><td>'+P2(r[4])+'</td></tr>'});
   h+=a.rows.length?'<tr class="tot"><td><b>Total</b></td><td></td><td><b>'+P2(a.t.c)+'</b></td><td><b>'+P2(a.t.w)+'</b></td><td><b>'+P2(a.t.r)+'</b></td></tr>':'<tr><td colspan="5" style="color:var(--mu)">Duty type panna inga varum</td></tr>';
   document.getElementById('abs').innerHTML=h+'</table>'}
+function dayData(){var out=[];S.dates.forEach(function(d){var any=false,no=[];S.names.forEach(function(p){var v=norm(S.cells[p.id+'|'+d]||''),has=v&&v!=='off';if(has)any=true;else if(p.n.trim())no.push(p.n.trim())});if(any)out.push([d,no])});return out}
+function dayRender(){var a=dayData(),ym=S.month.split('-');
+  document.getElementById('dayT').textContent='Daily abstract - duty illaadhavanga - '+MNS[+ym[1]-1]+' '+ym[0];
+  var h=a.length?'<table class="rt"><tr><th>Date</th><th>Count</th><th>Duty illa</th></tr>'+a.map(function(x){return '<tr'+(x[0]===TD?' style="background:var(--hd)"':'')+'><td style="white-space:nowrap"><b>'+fd(x[0])+'</b></td><td>'+P2(x[1].length)+'</td><td>'+(x[1].length?esc(x[1].join(', ')):'-')+'</td></tr>'}).join('')+'</table>':'<div style="color:var(--mu)">Duty type panna inga varum</div>';
+  document.getElementById('day').innerHTML=h}
 function lowData(){var all=[],tot=0;S.names.forEach(function(p){if(!p.n.trim())return;var c=0,w=0,r=0;S.dates.forEach(function(d){var v=norm(S.cells[p.id+'|'+d]||'');if(!v)return;if(v.indexOf('roll')>-1)r++;else if(v.indexOf('wait')>-1)w++;else if(/1st|2nd|3rd|4th/.test(v))c++});tot+=c;all.push([p.n.trim(),c,w,r])});var avg=all.length?tot/all.length:0;var low=all.filter(function(a){return a[1]<avg}).sort(function(a,b){return a[1]-b[1]});return{low:low,avg:avg,tot:tot}}
 function lowRender(){var a=lowData(),ym=S.month.split('-');
   document.getElementById('lowT').textContent='Kammi duty - '+MNS[+ym[1]-1]+' '+ym[0];
@@ -164,6 +174,7 @@ async function exportXlsx(){
   var ab=absData(),ar=[['Name','Sentry','Count','Waiting','Roll call']].concat(ab.rows);ar.push(['Total','',ab.t.c,ab.t.w,ab.t.r]);
   var w3=XLSX.utils.aoa_to_sheet(ar);w3['!cols']=[{wch:20},{wch:28},{wch:8},{wch:9},{wch:10}];XLSX.utils.book_append_sheet(wb,w3,'Monthly abstract');
   var lw=lowData(),lr=[['Name','Sentry','Waiting','Roll call']].concat(lw.low);var w4=XLSX.utils.aoa_to_sheet(lr);w4['!cols']=[{wch:22},{wch:8},{wch:9},{wch:10}];XLSX.utils.book_append_sheet(wb,w4,'Low duty');
+  var dd=dayData(),dr=[['Date','Count','Duty illaadhavanga']].concat(dd.map(function(x){return[fd(x[0]),x[1].length,x[1].join(', ')]}));var w5=XLSX.utils.aoa_to_sheet(dr);w5['!cols']=[{wch:8},{wch:8},{wch:90}];XLSX.utils.book_append_sheet(wb,w5,'Daily no duty');
   var MN=['January','February','March','April','May','June','July','August','September','October','November','December'],ym=S.month.split('-');
   var buf=XLSX.write(wb,{bookType:'xlsx',type:'array'});
   var fname='Duty-Chart-'+MN[+ym[1]-1]+'-'+ym[0]+'.xlsx';
